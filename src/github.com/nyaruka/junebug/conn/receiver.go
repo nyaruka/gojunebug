@@ -46,6 +46,8 @@ func (r HttpReceiver) Start(){
         }
 
         // we post our Msg body to our receiver URL
+        log.Printf("[%s][%d] Post msg (%s) to %s",
+                   r.connectionConfig.Uuid, r.id, job.Uuid, r.connectionConfig.ReceiverUrl)
         req, err := http.NewRequest("POST", r.connectionConfig.ReceiverUrl, bytes.NewBuffer(js))
         req.Header.Set("Content-Type", "application/json")
 

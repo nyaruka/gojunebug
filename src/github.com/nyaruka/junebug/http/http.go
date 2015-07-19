@@ -14,13 +14,13 @@ import (
 
 // our payload for a connection read response
 type ReadConnectionResponse struct {
-  Config conn.ConnectionConfig `json:"config"`
+  Connection conn.ConnectionConfig `json:"connection"`
   Status conn.ConnectionStatus `json:"status"`
 }
 
 // our payload for a msg read response
 type ReadMsgResponse struct {
-  Msg msg.Msg `json:"msg"`
+  Msg msg.Msg `json:"message"`
   Status msg.MsgStatus `json:"status"`
 }
 
@@ -80,7 +80,7 @@ func readConnection(w http.ResponseWriter, r *http.Request, ps httprouter.Params
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
-  resp.Config = config
+  resp.Connection = config
 
   // read our pending messages
   // TODO: replace with just count instead of reading everything in
@@ -181,14 +181,14 @@ func StartServer(conns map[string]conn.Connection){
     router.POST("/connection", addConnection)
     router.GET("/connection/:conn_uuid", readConnection)
     router.POST("/connection/:conn_uuid/send", sendMessage)
-    router.GET("/connection/:conn_uuid/:msg_uuid", readMessage)
+    router.GET("/connection/:conn_uuid/status/:msg_uuid", readMessage)
 
     log.Println(fmt.Sprintf("Starting server on http://localhost:%d", cfg.Config.Server.Port))
-    log.Println("\tPOST /connection                    - Add a connection")
-    log.Println("\tGET  /connection                    - List Connections")
-    log.Println("\tGET  /connection/[uuid]             - Read Connection Status")
-    log.Println("\tPOST /connection/[uuid]/send        - Send Message")
-    log.Println("\tGET  /connection/[uuid]/send/[uuid] - Get Message Status")
+    log.Println("\tPOST /connection                      - Add a connection")
+    log.Println("\tGET  /connection                      - List Connections")
+    log.Println("\tGET  /connection/[uuid]               - Read Connection Status")
+    log.Println("\tPOST /connection/[uuid]/send          - Send Message")
+    log.Println("\tGET  /connection/[uuid]/status/[uuid] - Get Message Status")
     log.Println()
 
     log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Config.Server.Port), router))

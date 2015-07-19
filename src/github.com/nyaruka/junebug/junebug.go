@@ -27,8 +27,9 @@ func main() {
 
     _, err := cfg.ReadConfig(*settings)
     if err != nil {
-      fmt.Println("Error reading Junebug settings\n")
-      log.Fatal(err)
+      fmt.Println("Error reading Junebug settings:")
+      fmt.Println(err.Error())
+      os.Exit(1)
     }
 
     // load our connection configurations
