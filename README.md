@@ -17,11 +17,17 @@ First update junebug.conf to have the appropriate settings. Specifically make su
 2015/07/19 16:35:25 	GET  /connection/[uuid]/status/[uuid] - Get Message Status
 ```
 
+### Sender Types
+Currently there is only one type of sender ```echo```, which will take 5 seconds to fake a send, then send back a response that is an echo of what was sent.
+
+### Receiver Types
+Currently there is only one type of receiver ```http```, which will POST the incoming msg to the URL provided on incoming messages.
+
 ## Endpoints
 All interactions with Junebug are through HTTP endpoints
 
 ### Creating Connection
-```
+```json
 POST /connection
 {
   "receiver_type": "http",
@@ -32,7 +38,7 @@ POST /connection
 }
 ```
 You will receive a response containing the connection created, and it's UUID:
-```
+```json
 {
   "uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
   "sender_type": "echo",
@@ -44,11 +50,11 @@ You will receive a response containing the connection created, and it's UUID:
 ```
 
 ### Listing Connections
-```
+```json
 GET /connection
 ```
 You will receive a list of the active connections:
-```
+```json
 {
   "connections": [
     {
@@ -68,7 +74,7 @@ You will receive a list of the active connections:
 GET /connection/[connection_uuid]
 ```
 You will receive the connection configuration as well as it's status of queued incoming and outgoing messages:
-```
+```json
 {
   "connection": {
     "uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
@@ -86,7 +92,7 @@ You will receive the connection configuration as well as it's status of queued i
 ```
 
 ### Sending a message
-```
+```json
 POST /connection/[connection_uuid]/send
 {
   "text": "Hello World",
@@ -94,7 +100,7 @@ POST /connection/[connection_uuid]/send
 }
 ```
 You will receive the message created and its UUID:
-```
+```json
 {
   "uuid": "2ac20704-bd15-4299-ad6c-0d1892ae54e8",
   "conn_uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
@@ -104,11 +110,11 @@ You will receive the message created and its UUID:
 ```
 
 ### Checking the status of a message
-```
+```json
 GET /connection/[connection_uuid]/status/[msg_uuid]
 ```
 You will receive the message content and its current status
-```
+```json
 {
   "message": {
     "uuid": "2ac20704-bd15-4299-ad6c-0d1892ae54e8",
