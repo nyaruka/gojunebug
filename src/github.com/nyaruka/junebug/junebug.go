@@ -10,10 +10,12 @@ import (
   "github.com/nyaruka/junebug/conn"
   "github.com/nyaruka/junebug/msg"
   "github.com/nyaruka/junebug/disp"
+  "runtime"
 )
 
 func main() {
     settings := flag.String("settings", "", "Our settings file")
+    procs := flag.Int("procs", 4, "Max number of processors to use")
     flag.Parse()
 
     // they didn't pass in settings parameter, print some help
@@ -31,6 +33,8 @@ func main() {
       fmt.Println(err.Error())
       os.Exit(1)
     }
+
+    runtime.GOMAXPROCS(*procs)
 
     // load our connection configurations
     configs, err := conn.ReadConnectionConfigs(cfg.Config.Directories.Connections)
