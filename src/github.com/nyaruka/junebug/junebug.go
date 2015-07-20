@@ -1,88 +1,88 @@
 package main
 
 import (
-  "os"
+	"flag"
+	"fmt"
+	"github.com/nyaruka/junebug/cfg"
+	"github.com/nyaruka/junebug/conn"
+	"github.com/nyaruka/junebug/disp"
+	"github.com/nyaruka/junebug/http"
+	"github.com/nyaruka/junebug/msg"
 	"log"
-  "fmt"
-  "flag"
-  "github.com/nyaruka/junebug/cfg"
-  "github.com/nyaruka/junebug/http"
-  "github.com/nyaruka/junebug/conn"
-  "github.com/nyaruka/junebug/msg"
-  "github.com/nyaruka/junebug/disp"
-  "runtime"
+	"os"
+	"runtime"
 )
 
 func main() {
-    settings := flag.String("settings", "", "Our settings file")
-    procs := flag.Int("procs", 4, "Max number of processors to use")
-    flag.Parse()
+	settings := flag.String("settings", "", "Our settings file")
+	procs := flag.Int("procs", 4, "Max number of processors to use")
+	flag.Parse()
 
-    // they didn't pass in settings parameter, print some help
-    if *settings == "" {
-      fmt.Println("\nUsage: junebug --settings=junebug.conf\n")
-      fmt.Println("Example configuration file:\n")
-      fmt.Println(cfg.GetSampleConfig())
-      fmt.Println()
-      os.Exit(1)
-    }
+	// they didn't pass in settings parameter, print some help
+	if *settings == "" {
+		fmt.Println("\nUsage: junebug --settings=junebug.conf\n")
+		fmt.Println("Example configuration file:\n")
+		fmt.Println(cfg.GetSampleConfig())
+		fmt.Println()
+		os.Exit(1)
+	}
 
-    _, err := cfg.ReadConfig(*settings)
-    if err != nil {
-      fmt.Println("Error reading Junebug settings:")
-      fmt.Println(err.Error())
-      os.Exit(1)
-    }
+	_, err := cfg.ReadConfig(*settings)
+	if err != nil {
+		fmt.Println("Error reading Junebug settings:")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
-    runtime.GOMAXPROCS(*procs)
+	runtime.GOMAXPROCS(*procs)
 
-    // load our connection configurations
-    configs, err := conn.ReadConnectionConfigs(cfg.Config.Directories.Connections)
-    if err != nil {
-      log.Fatal(err)
-    }
+	// load our connection configurations
+	configs, err := conn.ReadConnectionConfigs(cfg.Config.Directories.Connections)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    // for each one, create a real connection
-    // TODO: this whole block belongs somewhere else
-    connections := make(map[string]conn.Connection)
-    for i:=0; i<len(configs); i++ {
-      config := configs[i]
+	// for each one, create a real connection
+	// TODO: this whole block belongs somewhere else
+	connections := make(map[string]conn.Connection)
+	for i := 0; i < len(configs); i++ {
+		config := configs[i]
 
-      // create a dispatcher for this connection
-      dispatcher := disp.CreateDispatcher(config.NumSenders, config.NumReceivers)
+		// create a dispatcher for this connection
+		dispatcher := disp.CreateDispatcher(config.NumSenders, config.NumReceivers)
 
-      // and create our actual connection
-      connection := conn.CreateConnection(config, dispatcher)
+		// and create our actual connection
+		connection := conn.CreateConnection(config, dispatcher)
 
-      // start everything
-      dispatcher.Start()
-      connection.Start()
+		// start everything
+		dispatcher.Start()
+		connection.Start()
 
-      // dispatch any backlog of outgoing messages
-      outgoing, err := msg.ReadOutboxMsgs(config.Uuid)
-      if err != nil {
-        log.Fatal(err)
-      }
-      for _, msg := range outgoing {
-        connection.Dispatcher.Outgoing <- disp.MsgJob{msg.Uuid}
-      }
+		// dispatch any backlog of outgoing messages
+		outgoing, err := msg.ReadOutboxMsgs(config.Uuid)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, msg := range outgoing {
+			connection.Dispatcher.Outgoing <- disp.MsgJob{msg.Uuid}
+		}
 
-      // dispatch any backlog of messages
-      incoming, err := msg.ReadInboxMsgs(config.Uuid)
-      if err != nil {
-        log.Fatal(err)
-      }
-      for _, msg := range incoming {
-        connection.Dispatcher.Incoming <- disp.MsgJob{msg.Uuid}
-      }
+		// dispatch any backlog of messages
+		incoming, err := msg.ReadInboxMsgs(config.Uuid)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, msg := range incoming {
+			connection.Dispatcher.Incoming <- disp.MsgJob{msg.Uuid}
+		}
 
-      log.Println(fmt.Sprintf("[%s] Started with %d queued outgoing, %d queued incoming",
-                  config.Uuid, len(outgoing), len(incoming)))
+		log.Println(fmt.Sprintf("[%s] Started with %d queued outgoing, %d queued incoming",
+			config.Uuid, len(outgoing), len(incoming)))
 
-      // stash it
-      connections[config.Uuid] = connection
-    }
+		// stash it
+		connections[config.Uuid] = connection
+	}
 
-    // start our server
-    http.StartServer(connections)
+	// start our server
+	http.StartServer(connections)
 }
