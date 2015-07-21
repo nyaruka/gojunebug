@@ -9,12 +9,8 @@ import (
 
 // Defines our configuration file format, this is all in the git/init format
 type ConfigFormat struct {
-	Directories struct {
-		Connections string
-		Outbox      string
-		Sent        string
-		Inbox       string
-		Handled     string
+	DB struct {
+		Filename    string
 	}
 	Server struct {
 		Port int
@@ -24,12 +20,8 @@ type ConfigFormat struct {
 var Config ConfigFormat
 
 func GetSampleConfig() string {
-	return "[directories]\n" +
-		"connections = \"/usr/local/junebug/connections\"\n" +
-		"inbox = \"/usr/local/junebug/inbox\"\n" +
-		"outbox = \"/usr/local/junebug/outbox\"\n" +
-		"sent = \"/usr/local/junebug/sent\"\n" +
-		"handled = \"/usr/local/junebug/handled\"\n" +
+	return "[db]\n" +
+		"filename = \"/usr/local/junebug/junebug.db\"\n" +
 		"\n" +
 		"[server]\n" +
 		"port = 8000\n"
@@ -46,31 +38,5 @@ func validateDirectory(key string, path string) error {
 
 func ReadConfig(filename string) (ConfigFormat, error) {
 	err := gcfg.ReadFileInto(&Config, filename)
-
-	err = validateDirectory("connections", Config.Directories.Connections)
-	if err != nil {
-		return Config, err
-	}
-
-	err = validateDirectory("outbox", Config.Directories.Outbox)
-	if err != nil {
-		return Config, err
-	}
-
-	err = validateDirectory("sent", Config.Directories.Sent)
-	if err != nil {
-		return Config, err
-	}
-
-	err = validateDirectory("inbox", Config.Directories.Inbox)
-	if err != nil {
-		return Config, err
-	}
-
-	err = validateDirectory("handled", Config.Directories.Handled)
-	if err != nil {
-		return Config, err
-	}
-
 	return Config, err
 }

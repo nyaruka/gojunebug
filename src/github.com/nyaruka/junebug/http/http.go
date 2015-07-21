@@ -5,59 +5,60 @@ import (
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nyaruka/junebug/cfg"
-	"github.com/nyaruka/junebug/conn"
-	"github.com/nyaruka/junebug/disp"
-	"github.com/nyaruka/junebug/msg"
+	"github.com/nyaruka/junebug/store"
+	"github.com/nyaruka/junebug/engine"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 // our payload for a connection read response
 type ReadConnectionResponse struct {
-	Connection conn.ConnectionConfig `json:"connection"`
-	Status     conn.ConnectionStatus `json:"status"`
+	Connection *store.Connection       `json:"connection"`
+	Status     *store.ConnectionStatus `json:"status"`
 }
 
-// our payload for a msg read response
-type ReadMsgResponse struct {
-	Msg    msg.Msg       `json:"message"`
-	Status msg.MsgStatus `json:"status"`
+type ConnectionListResponse struct {
+	Connection *[]store.Connection `json:"connections"`
 }
 
 func addConnection(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// read the connection from the body
-	config, err := conn.ConnectionConfigFromJson(r.Body)
+	connection, err := store.ConnectionFromJson(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// write the config to the filesystem
-	configJson, err := config.Write(cfg.Config.Directories.Connections)
+	err = connection.Save()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: this is both a terrible copy/paste hack and not safe, needs to be replaced
-	dispatcher := disp.CreateDispatcher(config.NumSenders, config.NumReceivers)
-	connection := conn.CreateConnection(config, dispatcher)
-
-	// start everything
-	dispatcher.Start()
-	connection.Start()
-
-	// assign it to our connection map so people can send on it
-	connections[config.Uuid] = connection
+	// gentlemen, start your engines!
+	engine := engine.NewConnectionEngine(connection)
+	engine.Start()
+	engines[connection.Uuid] = engine
 
 	// write our config to the response
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(configJson)
+
+	// serialize to json
+	js, err := json.Marshal(connection)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func listConnections(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	configs, err := conn.ReadConnectionConfigs(cfg.Config.Directories.Connections)
-	connectionList := conn.ConnectionConfigList{configs}
+	connections, err := store.LoadAllConnections()
+	connectionList := ConnectionListResponse{connections}
 
 	js, err := json.Marshal(connectionList)
 	if err != nil {
@@ -75,29 +76,20 @@ func readConnection(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	var resp ReadConnectionResponse
 
 	// load our connection config
-	config, err := conn.ConnectionConfigFromUuid(cfg.Config.Directories.Connections, uuid)
+	connection, err := store.ConnectionFromUuid(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	resp.Connection = config
+	resp.Connection = connection
 
-	// read our pending messages
-	// TODO: replace with just count instead of reading everything in
-	msgs, err := msg.ReadOutboxMsgs(uuid)
+	// load our status
+	status, err := connection.GetStatus()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	resp.Status.OutgoingQueued = len(msgs)
-
-	// TODO: replace with just count instead of reading everything in
-	msgs, err = msg.ReadInboxMsgs(uuid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	resp.Status.IncomingQueued = len(msgs)
+	resp.Status = status
 
 	// output it
 	js, err := json.Marshal(resp)
@@ -114,13 +106,13 @@ func sendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	conn_uuid := ps.ByName("conn_uuid")
 
 	// make sure this is a valid connection
-	connection, exists := connections[conn_uuid]
+	engine, exists := engines[conn_uuid]
 	if !exists {
 		http.Error(w, "No connection with uuid: "+conn_uuid, http.StatusBadRequest)
 	}
 
 	// read the message from our body
-	msg, err := msg.MsgFromJson(r.Body)
+	msg, err := store.MsgFromJson(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -129,39 +121,18 @@ func sendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// assign our connection UUID
 	msg.ConnUuid = conn_uuid
 
-	// write the msg to the filesystem
-	msgJson, err := msg.WriteToOutbox()
+	// write it out
+	err = msg.WriteToOutbox()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// dispatch it
-	connection.Dispatcher.Outgoing <- disp.MsgJob{msg.Uuid}
-
-	// write our response
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(msgJson)
-}
-
-func readMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	connUuid := ps.ByName("conn_uuid")
-	msgUuid := ps.ByName("msg_uuid")
-
-	var resp ReadMsgResponse
-
-	// load our msg and status
-	msg, status, err := msg.MsgFromUuid(connUuid, msgUuid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	resp.Msg = msg
-	resp.Status = status
+	engine.Dispatcher.Outgoing <- msg.Id
 
 	// output it
-	js, err := json.Marshal(resp)
+	js, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -171,10 +142,37 @@ func readMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Write(js)
 }
 
-var connections map[string]conn.Connection
+func readMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	connUuid := ps.ByName("conn_uuid")
 
-func StartServer(conns map[string]conn.Connection) {
-	connections = conns
+	msgId, err := strconv.ParseUint(ps.ByName("msg_uuid"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// load our msg and status
+	msg, err := store.MsgFromId(connUuid, msgId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// output it
+	js, err := json.Marshal(msg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+var engines map[string]*engine.ConnectionEngine
+
+func StartServer(e *map[string]*engine.ConnectionEngine) {
+	engines = *e
 
 	router := httprouter.New()
 	router.GET("/connection", listConnections)
@@ -184,11 +182,11 @@ func StartServer(conns map[string]conn.Connection) {
 	router.GET("/connection/:conn_uuid/status/:msg_uuid", readMessage)
 
 	log.Println(fmt.Sprintf("Starting server on http://localhost:%d", cfg.Config.Server.Port))
-	log.Println("\tPOST /connection                      - Add a connection")
-	log.Println("\tGET  /connection                      - List Connections")
-	log.Println("\tGET  /connection/[uuid]               - Read Connection Status")
-	log.Println("\tPOST /connection/[uuid]/send          - Send Message")
-	log.Println("\tGET  /connection/[uuid]/status/[uuid] - Get Message Status")
+	log.Println("\tPOST /connection                    - Add a connection")
+	log.Println("\tGET  /connection                    - List Connections")
+	log.Println("\tGET  /connection/[uuid]             - Read Connection Status")
+	log.Println("\tPOST /connection/[uuid]/send        - Send Message")
+	log.Println("\tGET  /connection/[uuid]/status/[id] - Get Message Status")
 	log.Println()
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Config.Server.Port), router))

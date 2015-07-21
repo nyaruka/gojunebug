@@ -1,6 +1,5 @@
 # GoJunebug
-This is a proof of concept of using golang for an SMPP gateway like Kannel. It is just a proof of concept and 
-doesn't actually do all that much yet.
+This is a proof of concept of using golang for an SMPP gateway like Kannel. It doesn't do much of anything yet, it is mostly for me learning Go.
 
 ## Running
 First update junebug.conf to have the appropriate settings. Specifically make sure all the revelant directories exit.
@@ -14,7 +13,7 @@ First update junebug.conf to have the appropriate settings. Specifically make su
 2015/07/19 16:35:25 	GET  /connection                      - List Connections
 2015/07/19 16:35:25 	GET  /connection/[uuid]               - Read Connection Status
 2015/07/19 16:35:25 	POST /connection/[uuid]/send          - Send Message
-2015/07/19 16:35:25 	GET  /connection/[uuid]/status/[uuid] - Get Message Status
+2015/07/19 16:35:25 	GET  /connection/[uuid]/status/[id]   - Get Message Status
 ```
 
 ### Sender Types
@@ -86,7 +85,9 @@ You will receive the connection configuration as well as it's status of queued i
   },
   "status": {
     "outgoing_queued": 0,
-    "incoming_queued": 0
+    "incoming_queued": 0,
+    "handled_results": 1050,
+    "sent_results": 1050
   }
 }
 ```
@@ -96,34 +97,43 @@ You will receive the connection configuration as well as it's status of queued i
 POST /connection/[connection_uuid]/send
 {
   "text": "Hello World",
-  "address": "+250788383383"
+  "address": "+250788383383",
+  "priority": "H"
 }
 ```
+You can pick either H (high) or L (low) as a priority. All high priority messages will be sent before any low priority messages.
+
 You will receive the message created and its UUID:
 ```json
 {
-  "uuid": "2ac20704-bd15-4299-ad6c-0d1892ae54e8",
+  "id": 2047,
   "conn_uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
   "address": "+250788383383",
   "text": "Hello World"
+  "priority": "H",
+  "status": "Q",
+  "log": "",
+  "created": "2015-07-21T12:53:02.670865736-04:00",
+  "finished": "0001-01-01T00:00:00Z"
 }
 ```
 
 ### Checking the status of a message
 ```json
-GET /connection/[connection_uuid]/status/[msg_uuid]
+GET /connection/[connection_uuid]/status/[id]
 ```
-You will receive the message content and its current status
+You will receive the message content, its current status, when we finished
+handling it as well as any log set by the sender or receiver.
 ```json
 {
-  "message": {
-    "uuid": "2ac20704-bd15-4299-ad6c-0d1892ae54e8",
-    "conn_uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
-    "address": "+250788383383",
-    "text": "Hello World"
-  },
-  "status": {
-    "status": "sent"
-  }
+  "id": 2047,
+  "conn_uuid": "a0b46933-aab8-4907-bee6-db6db8057bec",
+  "address": "+250788383383",
+  "text": "Hello world",
+  "priority": "H",
+  "status": "S",
+  "log": "XXXX YYYY ZZZZ AAAA This is a log.\\\nXXXX YYYY ZZZZ BBBB It is fake.",
+  "created": "2015-07-21T13:08:36.214434765-04:00",
+  "finished": "2015-07-21T13:11:08.88047792-04:00"
 }
 ```

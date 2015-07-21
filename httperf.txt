@@ -1,0 +1,3 @@
+# replace with a real connection uuid, then run with something like (will do 100,000 reqs)
+# httperf --port=8000 --wsesslog 100000,100,httperf.txt
+/connection/a0b46933-aab8-4907-bee6-db6db8057bec/send method=POST contents='{ "address": "+250788383383", "text": "Hello world", "priority": "H" }'

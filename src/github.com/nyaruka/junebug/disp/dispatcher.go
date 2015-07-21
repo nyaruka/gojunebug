@@ -1,5 +1,9 @@
 package disp
 
+import (
+	"sort"
+)
+
 // The dispatcher essentially acts a router between available senders for a connection
 // and incoming msgs that need to be sent. goroutines communicate to it using the
 // Jobs and Senders channels.
@@ -10,44 +14,56 @@ package disp
 // As senders free up, they are added to the available senders queue.
 //
 // The dispatcher takes care of matchine one with the other.
-type MsgJob struct {
-	Uuid string
-}
-
 type MsgSender interface {
-	Send(MsgJob)
+	Send(uint64)
 	Start()
 }
 
 type MsgReceiver interface {
-	Receive(MsgJob)
+	Receive(uint64)
 	Start()
 }
 
 type Dispatcher struct {
-	Outgoing  chan MsgJob
+	Outgoing  chan uint64
 	Senders   chan MsgSender
-	Incoming  chan MsgJob
+	Incoming  chan uint64
 	Receivers chan MsgReceiver
 
-	available_outgoing []MsgJob
+	available_outgoing []uint64
 	available_senders  []MsgSender
 
-	available_incoming  []MsgJob
+	available_incoming  []uint64
 	available_receivers []MsgReceiver
 }
 
 func CreateDispatcher(nsenders int, nreceivers int) Dispatcher {
-	dispatcher := Dispatcher{Outgoing: make(chan MsgJob),
+	dispatcher := Dispatcher{Outgoing: make(chan uint64),
 		Senders:   make(chan MsgSender, nsenders),
-		Incoming:  make(chan MsgJob, nsenders),
+		Incoming:  make(chan uint64, nsenders),
 		Receivers: make(chan MsgReceiver, nreceivers),
-
-		available_outgoing:  make([]MsgJob, 0, 1000),
+		available_outgoing:  make([]uint64, 0, 1000),
 		available_senders:   make([]MsgSender, 0, nsenders),
-		available_incoming:  make([]MsgJob, 0, 1000),
+		available_incoming:  make([]uint64, 0, 1000),
 		available_receivers: make([]MsgReceiver, 0, nreceivers)}
 	return dispatcher
+}
+
+func insertSorted(sorted *[]uint64, id uint64) (*[]uint64) {
+	ids := *sorted
+	i := sort.Search(len(ids), func(i int) bool { return (ids)[i] >= id })
+
+	// special case inserting at the end, which is a simple append
+	if i == len(ids){
+		ids = append(ids, id)
+	} else {
+		// we are inserting in the middle somewhere, use slicing
+		ids = append(ids, 0)
+		copy(ids[i+1:], ids[i:])
+		ids[i] = id
+	}
+
+	return &ids
 }
 
 // Starts our goroutine that will accept jobs and available senders
@@ -57,11 +73,13 @@ func (d Dispatcher) Start() {
 		for {
 			select {
 			case outgoing := <-d.Outgoing:
-				d.available_outgoing = append(d.available_outgoing, outgoing)
+			    new_outgoing := insertSorted(&d.available_outgoing, outgoing)
+			    d.available_outgoing = *new_outgoing
 			case sender := <-d.Senders:
 				d.available_senders = append(d.available_senders, sender)
 			case incoming := <-d.Incoming:
-				d.available_incoming = append(d.available_incoming, incoming)
+			    new_incoming := insertSorted(&d.available_incoming, incoming)
+				d.available_incoming = *new_incoming
 			case receiver := <-d.Receivers:
 				d.available_receivers = append(d.available_receivers, receiver)
 			}

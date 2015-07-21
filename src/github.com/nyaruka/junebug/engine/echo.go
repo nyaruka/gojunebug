@@ -1,0 +1,80 @@
+package engine
+
+// I really want this to live in /senders but engine doesn't work then.. hrmm
+
+import (
+	"github.com/nyaruka/junebug/disp"
+	"github.com/nyaruka/junebug/store"
+	"log"
+	"fmt"
+	"time"
+)
+
+// EchoSender is a dummy sender that takes 5 seconds to send anything, then returns an
+// echo of the sent message back through our connection.
+//
+// It is an implementation of MsgSender
+//
+
+type EchoSender struct {
+	id               int
+	connection       store.Connection
+	readySenders     chan disp.MsgSender
+	pendingMsg       chan uint64
+	incoming         chan uint64 // for receiving out our echos
+}
+
+func (s EchoSender) Send(id uint64) {
+	s.pendingMsg <- id
+}
+
+// Starts our sender, this starts a goroutine that blocks on receiving a message to send
+func (s EchoSender) Start() {
+	go func() {
+		for {
+			// mark ourselves as ready for work
+			s.readySenders <- s
+
+			// wait for a job to come in
+			id := <-s.pendingMsg
+			var msgLog = ""
+
+			// load our msg
+			msg, err := store.MsgFromId(s.connection.Uuid, id)
+			if err != nil {
+				msgLog = fmt.Sprintf("[%s][%d] Error sending msg (%d): %s", s.connection.Uuid, s.id, id, err.Error())
+			} else {
+				// sleep a bit to slow things down
+				time.Sleep(time.Second * 5)
+				msgLog = fmt.Sprintf("XXXX YYYY ZZZZ AAAA This is a log.\n" +
+				                     "XXXX YYYY ZZZZ BBBB It is fake.")
+			}
+
+			// mark the message as sent
+			err = msg.MarkSent(msgLog)
+			if err != nil {
+				log.Printf("[%s][%d] Error marking msg sent (%d)", s.connection.Uuid, s.id, id)
+			} else {
+				log.Printf("[%s][%d] Sent msg (%d)", s.connection.Uuid, s.id, id)
+			}
+
+			// create a new incoming msg
+			incoming := store.MsgFromText(s.connection.Uuid, msg.Address, "echo: "+msg.Text)
+			err = incoming.WriteToInbox()
+			if err != nil {
+				log.Printf("[%s][%d] Error adding incoming msg (%s)", s.connection.Uuid, s.id, id)
+			}
+
+			// schedule it to go out
+			s.incoming <- incoming.Id
+		}
+	}()
+}
+
+func CreateEchoSender(id int, conn *store.Connection, readySenders chan disp.MsgSender, incoming chan uint64) EchoSender {
+	return EchoSender{id: id,
+		connection:       *conn,
+		readySenders:     readySenders,
+		incoming:         incoming,
+		pendingMsg:       make(chan uint64)}
+}
