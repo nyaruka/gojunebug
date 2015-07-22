@@ -44,10 +44,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("")
+
 	// for each one, create a real connection
 	engines := make(map[string]*engine.ConnectionEngine)
 	for i := 0; i < len(*connections); i++ {
 		connection := (*connections)[i]
+
+		// warm our cache by getting our status
+		_, err = connection.GetStatus()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// and create our actual connection
 		engine := engine.NewConnectionEngine(&connection)
@@ -57,9 +65,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Println(
-			fmt.Sprintf("[%s] Started with %d queued outgoing, %d queued incoming",
-			connection.Uuid, outgoing, incoming))
+		log.Printf("[%.8s] Started with %d queued outgoing, %d queued incoming\n",
+			       connection.Uuid, outgoing, incoming)
 
 		// stash it
 		engines[connection.Uuid] = engine

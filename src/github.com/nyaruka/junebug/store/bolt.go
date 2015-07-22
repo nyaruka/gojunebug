@@ -244,6 +244,27 @@ func getMsg(connection string, id uint64) (*Msg, error) {
 	})
 }
 
+func deleteConnection(connection *Connection) (err error) {
+	return db.Update(func(tx *bolt.Tx) error {
+		// Delete our connection from the connnections bucket
+		b := tx.Bucket([]byte(CONNECTION_BUCKET))
+
+		// delete our config
+		if b != nil {
+			err = b.Delete([]byte(connection.Uuid))
+		}
+
+		// keep going even if we have an error, still have to remove our msg bucket
+		b = tx.Bucket([]byte(connection.Uuid))
+
+		if b != nil {
+			return tx.DeleteBucket([]byte(connection.Uuid))
+		} else {
+			return err
+		}
+	})
+}
+
 func saveConnection(connection *Connection) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create our bucket
@@ -411,6 +432,12 @@ func MsgFromJson(body io.Reader) (*Msg, error) {
 // Writes this connection to disk
 func (c *Connection) Save() (err error) {
 	return saveConnection(c)
+}
+
+// Deletes this connection entirely, callers should make sure that
+// any running ConnectionEngine's have been stopped beforehand
+func (c *Connection) Delete() (err error) {
+	return deleteConnection(c)
 }
 
 // loads our number of queued messages

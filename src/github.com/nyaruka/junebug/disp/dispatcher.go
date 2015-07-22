@@ -2,6 +2,7 @@ package disp
 
 import (
 	"github.com/nyaruka/junebug/store"
+	"sync"
 )
 
 // The dispatcher essentially acts a router between available senders for a connection
@@ -29,30 +30,48 @@ type Dispatcher struct {
 	Senders   chan MsgSender
 	Incoming  chan uint64
 	Receivers chan MsgReceiver
+	Done chan int
 
 	available_outgoing store.PriorityQueue
 	available_senders  []MsgSender
 
 	available_incoming  store.PriorityQueue
 	available_receivers []MsgReceiver
+
+	WaitGroup   *sync.WaitGroup
 }
 
-func CreateDispatcher(nsenders int, nreceivers int) Dispatcher {
-	dispatcher := Dispatcher{Outgoing: make(chan uint64),
+func CreateDispatcher(nsenders int, nreceivers int) *Dispatcher {
+	return &Dispatcher{
+		Outgoing: make(chan uint64),
 		Senders:   make(chan MsgSender, nsenders),
 		Incoming:  make(chan uint64, nsenders),
 		Receivers: make(chan MsgReceiver, nreceivers),
+		Done:      make(chan int),
 
 		available_senders:   make([]MsgSender, 0, nsenders),
-		available_receivers: make([]MsgReceiver, 0, nreceivers)}
+		available_receivers: make([]MsgReceiver, 0, nreceivers),
 
-	return dispatcher
+		WaitGroup: new(sync.WaitGroup) }
+
+}
+
+// Stops our goroutines in an ordered manner, blocks until they are all complete
+func (d *Dispatcher) Stop() {
+	// Close our done channel, this will cause our workers to stop
+	close(d.Done)
+
+	// wait for them all to exit
+	d.WaitGroup.Wait()
 }
 
 // Starts our goroutine that will accept jobs and available senders
 // and match them as they come in
-func (d Dispatcher) Start() {
+func (d *Dispatcher) Start() {
 	go func() {
+		d.WaitGroup.Add(1)
+		defer d.WaitGroup.Done()
+
 		for {
 			select {
 			case outgoing := <-d.Outgoing:
@@ -63,6 +82,8 @@ func (d Dispatcher) Start() {
 			    d.available_incoming.Insert(incoming)
 			case receiver := <-d.Receivers:
 				d.available_receivers = append(d.available_receivers, receiver)
+			case <-d.Done:
+			    return
 			}
 
 			// while we have possible pairings of outgoing messages

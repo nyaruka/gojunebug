@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"fmt"
+	"sync"
 )
 
 // Http Receiver is a basic receiver that forwards the incoming message to an endpoint
@@ -18,6 +19,8 @@ type HttpReceiver struct {
 	connection       store.Connection
 	readyReceivers   chan disp.MsgReceiver
 	pendingMsg       chan uint64
+	done             chan int
+	wg               *sync.WaitGroup
 }
 
 func (s HttpReceiver) Receive(id uint64) {
@@ -27,12 +30,22 @@ func (s HttpReceiver) Receive(id uint64) {
 // Starts our receiver, this starts a goroutine that blocks on msgs to forward
 func (r HttpReceiver) Start() {
 	go func() {
+		// tell our wait group we started
+		r.wg.Add(1)
+
+		// when we exit, tell our wait group we stopped
+		defer r.wg.Done()
+		var id uint64
+
 		for {
-			// mark ourselves as ready for work
+			// mark ourselves as ready for work, this never blocks
 			r.readyReceivers <- r
 
-			// wait for a job to come in
-			id := <-r.pendingMsg
+			// wait for a job to come in, or be marked as complete
+			select {
+			case id = <-r.pendingMsg:
+			case <-r.done: return
+			}
 
 			// load our msg
 			var msgLog = ""
@@ -84,9 +97,12 @@ func (r HttpReceiver) Start() {
 	}()
 }
 
-func CreateHttpReceiver(id int, conn *store.Connection, readyReceivers chan disp.MsgReceiver) HttpReceiver {
-	return HttpReceiver{id: id,
+func CreateHttpReceiver(id int, conn *store.Connection, dispatcher *disp.Dispatcher) HttpReceiver {
+	return HttpReceiver{
+		id: id,
 		connection:       *conn,
-		readyReceivers:   readyReceivers,
-		pendingMsg:       make(chan uint64)}
+		readyReceivers:   dispatcher.Receivers,
+		pendingMsg:       make(chan uint64),
+		done:             dispatcher.Done,
+		wg:               dispatcher.WaitGroup }
 }

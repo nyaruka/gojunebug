@@ -10,7 +10,7 @@ type ConnectionEngine struct {
 	Connection     *store.Connection
 	Senders        []disp.MsgSender
 	Receivers      []disp.MsgReceiver
-	Dispatcher     disp.Dispatcher
+	Dispatcher     *disp.Dispatcher
 }
 
 // Creates a new Connection object given the configuration and dispatcher, this is a factory
@@ -24,7 +24,7 @@ func NewConnectionEngine(conn *store.Connection) *ConnectionEngine {
 	switch conn.SenderType {
 	case "echo":
 		for i := 0; i < conn.NumSenders; i++ {
-			senders[i] = CreateEchoSender(i, conn, dispatcher.Senders, dispatcher.Incoming)
+			senders[i] = CreateEchoSender(i, conn, dispatcher)
 		}
 	default:
 		log.Fatal("Unsupported sender type: " + conn.SenderType)
@@ -35,7 +35,7 @@ func NewConnectionEngine(conn *store.Connection) *ConnectionEngine {
 	switch conn.ReceiverType {
 	case "http":
 		for i := 0; i < conn.NumReceivers; i++ {
-			receivers[i] = CreateHttpReceiver(i, conn, dispatcher.Receivers)
+			receivers[i] = CreateHttpReceiver(i, conn, dispatcher)
 		}
 	default:
 		log.Fatal("Unsupported receiver type: " + conn.ReceiverType)
@@ -68,6 +68,11 @@ func (c *ConnectionEngine) AddPendingMsgsFromDB() (outgoing int, incoming int, e
 	}
 
 	return len(*outgoing_ids), len(*incoming_ids), err
+}
+
+// Shuts down our connection
+func (c *ConnectionEngine) Stop() {
+	c.Dispatcher.Stop()
 }
 
 // Starts our connection and all it's senders as listening

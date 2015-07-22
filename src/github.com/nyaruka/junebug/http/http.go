@@ -13,7 +13,7 @@ import (
 )
 
 // our payload for a connection read response
-type ReadConnectionResponse struct {
+type ConnectionResponse struct {
 	Connection *store.Connection       `json:"connection"`
 	Status     *store.ConnectionStatus `json:"status"`
 }
@@ -56,6 +56,47 @@ func addConnection(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	w.Write(js)
 }
 
+func deleteConnection(w http.ResponseWriter, r *http.Request, ps httprouter.Params){
+	uuid := ps.ByName("conn_uuid")
+	var resp ConnectionResponse
+
+	// load our connection config
+	connection, err := store.ConnectionFromUuid(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp.Connection = connection
+
+	// load our status
+	status, err := connection.GetStatus()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp.Status = status
+
+	// output it
+	js, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// shut down our connection
+	engine, exists := engines[uuid]
+	if exists {
+		engine.Stop()
+		delete(engines, uuid)
+	}
+
+	// remove all our data for it
+	connection.Delete()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
 func listConnections(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	connections, err := store.LoadAllConnections()
 	connectionList := ConnectionListResponse{connections}
@@ -73,7 +114,7 @@ func listConnections(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 func readConnection(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	uuid := ps.ByName("conn_uuid")
 
-	var resp ReadConnectionResponse
+	var resp ConnectionResponse
 
 	// load our connection config
 	connection, err := store.ConnectionFromUuid(uuid)
@@ -179,17 +220,23 @@ func StartServer(e *map[string]*engine.ConnectionEngine) {
 
 	router := httprouter.New()
 	router.GET("/connection", listConnections)
-	router.POST("/connection", addConnection)
+	router.PUT("/connection", addConnection)
+	router.DELETE("/connection/:conn_uuid", deleteConnection)
 	router.GET("/connection/:conn_uuid", readConnection)
-	router.POST("/connection/:conn_uuid/send", sendMessage)
+	router.PUT("/connection/:conn_uuid/send", sendMessage)
 	router.GET("/connection/:conn_uuid/status/:msg_uuid", readMessage)
 
+	log.Println("")
 	log.Println(fmt.Sprintf("Starting server on http://localhost:%d", cfg.Config.Server.Port))
-	log.Println("\tPOST /connection                    - Add a connection")
-	log.Println("\tGET  /connection                    - List Connections")
-	log.Println("\tGET  /connection/[uuid]             - Read Connection Status")
-	log.Println("\tPOST /connection/[uuid]/send        - Send Message")
-	log.Println("\tGET  /connection/[uuid]/status/[id] - Get Message Status")
+	log.Println("\tPUT     /connection                    - Add a connection")
+	log.Println("\tGET     /connection                    - List Connections")
+	log.Println("\tGET     /connection/[uuid]             - Read Connection Status")
+	log.Println("\tDELETE  /connection/[uuid]/            - Shut down and delete a Connection")
+	log.Println("")
+	log.Println("\tPUT     /connection/[uuid]/send        - Send Message")
+	log.Println("\tGET     /connection/[uuid]/status/[id] - Get Message Status")
+	log.Println("")
+
 	log.Println()
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Config.Server.Port), router))

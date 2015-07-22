@@ -7,7 +7,8 @@ import (
 	"github.com/nyaruka/junebug/store"
 	"log"
 	"fmt"
-//	"time"
+	"sync"
+	"time"
 )
 
 // EchoSender is a dummy sender that takes 5 seconds to send anything, then returns an
@@ -22,6 +23,8 @@ type EchoSender struct {
 	readySenders     chan disp.MsgSender
 	pendingMsg       chan uint64
 	incoming         chan uint64 // for receiving out our echos
+	done             chan int
+	wg               *sync.WaitGroup
 }
 
 func (s EchoSender) Send(id uint64) {
@@ -31,12 +34,21 @@ func (s EchoSender) Send(id uint64) {
 // Starts our sender, this starts a goroutine that blocks on receiving a message to send
 func (s EchoSender) Start() {
 	go func() {
+		s.wg.Add(1)
+		defer s.wg.Done()
+		var id uint64
+
 		for {
-			// mark ourselves as ready for work
+			// mark ourselves as ready for work, this never blocks
 			s.readySenders <- s
 
-			// wait for a job to come in
-			id := <-s.pendingMsg
+			// wait for a job to come in, or for us to be shut down
+			select {
+			case id = <-s.pendingMsg:
+			case <- s.done:
+			  return
+			}
+
 			var msgLog = ""
 
 			// load our msg
@@ -45,7 +57,7 @@ func (s EchoSender) Start() {
 				msgLog = fmt.Sprintf("[%s][%d] Error sending msg (%d): %s", s.connection.Uuid, s.id, id, err.Error())
 			} else {
 				// sleep a bit to slow things down
-				//time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * 5)
 				msgLog = fmt.Sprintf("XXXX YYYY ZZZZ AAAA This is a log.\n" +
 				                     "XXXX YYYY ZZZZ BBBB It is fake.")
 			}
@@ -77,10 +89,13 @@ func (s EchoSender) Start() {
 	}()
 }
 
-func CreateEchoSender(id int, conn *store.Connection, readySenders chan disp.MsgSender, incoming chan uint64) EchoSender {
-	return EchoSender{id: id,
+func CreateEchoSender(id int, conn *store.Connection, dispatcher *disp.Dispatcher) EchoSender {
+	return EchoSender{
+		id: id,
 		connection:       *conn,
-		readySenders:     readySenders,
-		incoming:         incoming,
-		pendingMsg:       make(chan uint64)}
+		readySenders:     dispatcher.Senders,
+		incoming:         dispatcher.Incoming,
+		pendingMsg:       make(chan uint64),
+		done:             dispatcher.Done,
+		wg:               dispatcher.WaitGroup }
 }
