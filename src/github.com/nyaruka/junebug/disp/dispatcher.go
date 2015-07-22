@@ -1,7 +1,7 @@
 package disp
 
 import (
-	"sort"
+	"github.com/nyaruka/junebug/store"
 )
 
 // The dispatcher essentially acts a router between available senders for a connection
@@ -30,10 +30,10 @@ type Dispatcher struct {
 	Incoming  chan uint64
 	Receivers chan MsgReceiver
 
-	available_outgoing []uint64
+	available_outgoing store.PriorityQueue
 	available_senders  []MsgSender
 
-	available_incoming  []uint64
+	available_incoming  store.PriorityQueue
 	available_receivers []MsgReceiver
 }
 
@@ -42,28 +42,11 @@ func CreateDispatcher(nsenders int, nreceivers int) Dispatcher {
 		Senders:   make(chan MsgSender, nsenders),
 		Incoming:  make(chan uint64, nsenders),
 		Receivers: make(chan MsgReceiver, nreceivers),
-		available_outgoing:  make([]uint64, 0, 1000),
+
 		available_senders:   make([]MsgSender, 0, nsenders),
-		available_incoming:  make([]uint64, 0, 1000),
 		available_receivers: make([]MsgReceiver, 0, nreceivers)}
+
 	return dispatcher
-}
-
-func insertSorted(sorted *[]uint64, id uint64) (*[]uint64) {
-	ids := *sorted
-	i := sort.Search(len(ids), func(i int) bool { return (ids)[i] >= id })
-
-	// special case inserting at the end, which is a simple append
-	if i == len(ids){
-		ids = append(ids, id)
-	} else {
-		// we are inserting in the middle somewhere, use slicing
-		ids = append(ids, 0)
-		copy(ids[i+1:], ids[i:])
-		ids[i] = id
-	}
-
-	return &ids
 }
 
 // Starts our goroutine that will accept jobs and available senders
@@ -73,36 +56,32 @@ func (d Dispatcher) Start() {
 		for {
 			select {
 			case outgoing := <-d.Outgoing:
-			    new_outgoing := insertSorted(&d.available_outgoing, outgoing)
-			    d.available_outgoing = *new_outgoing
+			    d.available_outgoing.Insert(outgoing)
 			case sender := <-d.Senders:
 				d.available_senders = append(d.available_senders, sender)
 			case incoming := <-d.Incoming:
-			    new_incoming := insertSorted(&d.available_incoming, incoming)
-				d.available_incoming = *new_incoming
+			    d.available_incoming.Insert(incoming)
 			case receiver := <-d.Receivers:
 				d.available_receivers = append(d.available_receivers, receiver)
 			}
 
 			// while we have possible pairings of outgoing messages
-			for len(d.available_senders) > 0 && len(d.available_outgoing) > 0 {
-				msg := d.available_outgoing[0]
+			for len(d.available_senders) > 0 && d.available_outgoing.Len() > 0 {
+				msg := d.available_outgoing.Pop()
 				sender := d.available_senders[0]
 				sender.Send(msg)
 
 				// pop off the elements we just sent
-				d.available_outgoing = d.available_outgoing[1:]
 				d.available_senders = d.available_senders[1:]
 			}
 
 			// while we have possible pairings of incoming messages
-			for len(d.available_receivers) > 0 && len(d.available_incoming) > 0 {
-				msg := d.available_incoming[0]
+			for len(d.available_receivers) > 0 && d.available_incoming.Len() > 0 {
+				msg := d.available_incoming.Pop()
 				receiver := d.available_receivers[0]
 				receiver.Receive(msg)
 
 				// pop off the elements we just sent
-				d.available_incoming = d.available_incoming[1:]
 				d.available_receivers = d.available_receivers[1:]
 			}
 		}

@@ -58,6 +58,9 @@ func (s EchoSender) Start() {
 				log.Printf("[%s][%d] Sent msg (%d)", s.connection.Uuid, s.id, id)
 			}
 
+			// release our message back to the pool
+			msg.Release()
+
 			// create a new incoming msg
 			incoming := store.MsgFromText(s.connection.Uuid, msg.Address, "echo: "+msg.Text)
 			err = incoming.WriteToInbox()
@@ -67,6 +70,9 @@ func (s EchoSender) Start() {
 
 			// schedule it to go out
 			s.incoming <- incoming.Id
+
+			// release our msg back to the pool
+			incoming.Release()
 		}
 	}()
 }

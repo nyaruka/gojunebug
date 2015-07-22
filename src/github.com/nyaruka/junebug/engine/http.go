@@ -74,10 +74,12 @@ func (r HttpReceiver) Start() {
 			// mark the message as sent
 			err = msg.MarkHandled(msgLog)
 			log.Printf("[%s][%d] Handled msg (%d)", r.connection.Uuid, r.id, id)
-
 			if err != nil {
 				log.Println("Error marking msg handled")
 			}
+
+			// release our msg back to our object pool
+			msg.Release()
 		}
 	}()
 }

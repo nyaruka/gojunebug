@@ -113,6 +113,7 @@ func sendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	// read the message from our body
 	msg, err := store.MsgFromJson(r.Body)
+	defer msg.Release()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -153,6 +154,8 @@ func readMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	// load our msg and status
 	msg, err := store.MsgFromId(connUuid, msgId)
+	defer msg.Release()
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

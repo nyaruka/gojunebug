@@ -11,6 +11,7 @@ import (
 	"errors"
 	"time"
 	"fmt"
+	"sync"
 )
 
 type Msg struct {
@@ -75,6 +76,15 @@ func OpenDB(filename string) (*bolt.DB, error) {
 
 func CloseDB() error {
 	return db.Close()
+}
+
+//------------------------------------------------------------------------
+// Msg Pool (this saves us GC allocations as we build a LOT of msgs)
+// ------------------------------------------------------------------------
+var msgPool = sync.Pool{
+    New: func() interface{} {
+        return &Msg{}
+    },
 }
 
 //------------------------------------------------------------------------
@@ -143,7 +153,7 @@ func getMsgBucketKeys(connection string, bucket string) (*[]uint64, error) {
 }
 
 func saveMsgToBucket(msg *Msg, addBucket string, deleteBucket string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Batch(func(tx *bolt.Tx) error {
 		b, err := getMsgBucket(tx, msg.ConnUuid, MSG_BUCKET)
 		if err != nil {
 			return err
@@ -214,8 +224,9 @@ func saveMsgToBucket(msg *Msg, addBucket string, deleteBucket string) error {
 }
 
 func getMsg(connection string, id uint64) (*Msg, error) {
-	var msg Msg
-	return &msg, db.View(func(tx *bolt.Tx) error {
+	msg := msgPool.Get().(*Msg)
+	msg.init()
+	return msg, db.View(func(tx *bolt.Tx) error {
 		b, err := getMsgBucket(tx, connection, MSG_BUCKET)
 		if err != nil {
 			return err
@@ -228,7 +239,7 @@ func getMsg(connection string, id uint64) (*Msg, error) {
 
 
 		dec := gob.NewDecoder(bytes.NewReader(msgBytes))
-		err = dec.Decode(&msg)
+		err = dec.Decode(msg)
 		return err
 	})
 }
@@ -321,6 +332,24 @@ func (m *Msg) MarkHandled(msgLog string) (err error) {
 	return saveMsgToBucket(m, HANDLED_BUCKET, INBOX_BUCKET)
 }
 
+// Clears the values on this msg
+func (m *Msg) init() {
+	m.Id = 0
+	m.ConnUuid = ""
+	m.Address = ""
+	m.Text = ""
+	m.Priority = ""
+	m.Status = ""
+	m.Log = ""
+	m.Created = time.Time{}
+	m.Finished = time.Time{}
+}
+
+// Releases this message back to our pool
+func (m *Msg) Release() {
+	msgPool.Put(m)
+}
+
 // Reads an Inbox Msg
 func MsgFromId(connUuid string, id uint64) (msg *Msg, err error) {
 	return getMsg(connUuid, id)
@@ -328,19 +357,27 @@ func MsgFromId(connUuid string, id uint64) (msg *Msg, err error) {
 
 // Builds a Msg object from the passed in text and from
 func MsgFromText(connUuid string, from string, text string) *Msg {
-	return &Msg{ConnUuid: connUuid,
-		        Address:  from,
-		        Text:     text,
-		        Priority: PRIORITY_LOW,
-	            Status:   STATUS_QUEUED,
-		        Created:  time.Now()}
+	msg := msgPool.Get().(*Msg)
+	msg.init()
+
+	msg.ConnUuid = connUuid
+	msg.Address = from
+	msg.Text = text
+	msg.Priority = PRIORITY_LOW
+	msg.Status = STATUS_QUEUED
+	msg.Created = time.Now()
+
+	return msg
 }
 
 // Builds a Msg object from the passed in JSON
-func MsgFromJson(body io.Reader) (msg *Msg, err error) {
+func MsgFromJson(body io.Reader) (*Msg, error) {
+	msg := msgPool.Get().(*Msg)
+	msg.init()
+
 	// Decode it from the passed in JSON
 	decoder := json.NewDecoder(body)
-	err = decoder.Decode(&msg)
+	err := decoder.Decode(msg)
 	if err != nil {
 		return msg, err
 	}
@@ -454,7 +491,7 @@ func ConnectionFromJson(body io.Reader) (*Connection, error) {
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&connection)
 	if err != nil {
-		return &connection, err
+		return &connection, errors.New("Invalid JSON, please check the body of your request: " + err.Error())
 	}
 
 	// type is required
