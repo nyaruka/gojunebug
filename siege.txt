@@ -1,0 +1,1 @@
+http://localhost:8000/connection/649ab913-3f7c-4330-9503-272fbd06ad9f/send POST { "address": "+250788383383", "text": "Hello world", "priority": "H" }

@@ -7,7 +7,7 @@ import (
 	"github.com/nyaruka/junebug/store"
 	"log"
 	"fmt"
-	"time"
+//	"time"
 )
 
 // EchoSender is a dummy sender that takes 5 seconds to send anything, then returns an
@@ -45,7 +45,7 @@ func (s EchoSender) Start() {
 				msgLog = fmt.Sprintf("[%s][%d] Error sending msg (%d): %s", s.connection.Uuid, s.id, id, err.Error())
 			} else {
 				// sleep a bit to slow things down
-				time.Sleep(time.Second * 5)
+				//time.Sleep(time.Second * 5)
 				msgLog = fmt.Sprintf("XXXX YYYY ZZZZ AAAA This is a log.\n" +
 				                     "XXXX YYYY ZZZZ BBBB It is fake.")
 			}

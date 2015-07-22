@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
     "github.com/boltdb/bolt"
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/satori/go.uuid"
 	"encoding/gob"
 	"encoding/binary"
 	"io"
@@ -153,7 +153,7 @@ func getMsgBucketKeys(connection string, bucket string) (*[]uint64, error) {
 }
 
 func saveMsgToBucket(msg *Msg, addBucket string, deleteBucket string) error {
-	return db.Batch(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b, err := getMsgBucket(tx, msg.ConnUuid, MSG_BUCKET)
 		if err != nil {
 			return err
@@ -524,7 +524,7 @@ func ConnectionFromJson(body io.Reader) (*Connection, error) {
 	}
 
 	// ok, all looks good, generate a new UUID
-	connection.Uuid = uuid.New()
+	connection.Uuid = uuid.NewV4().String()
 
 	// and return it
 	return &connection, nil

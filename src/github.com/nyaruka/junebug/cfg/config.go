@@ -1,7 +1,7 @@
 package cfg
 
 import (
-	"code.google.com/p/gcfg"
+	"github.com/scalingdata/gcfg"
 	"errors"
 	"fmt"
 	"os"
