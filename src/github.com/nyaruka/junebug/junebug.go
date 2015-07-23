@@ -70,7 +70,7 @@ func main() {
 		}
 
 		log.Printf("[%.8s] Started with %d queued outgoing, %d queued incoming\n",
-			       connection.Uuid, outgoing, incoming)
+			connection.Uuid, outgoing, incoming)
 
 		// stash it
 		engines[connection.Uuid] = engine
