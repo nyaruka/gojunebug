@@ -1,4 +1,4 @@
-# GoJunebug
+# GoJunebug 
 This is a proof of concept of using golang for an SMPP gateway like Kannel. It doesn't do much of anything yet, it is mostly for me learning Go.
 
 ## Running
