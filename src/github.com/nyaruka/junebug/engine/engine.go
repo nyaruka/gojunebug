@@ -21,35 +21,38 @@ func NewConnectionEngine(conn *store.Connection) (ce *ConnectionEngine, err erro
 
 	// Create all our senders
 	// TODO: refactor this so it isn't so repetitive
-	senders := make([]disp.MsgSender, conn.Senders.Count)
+	senders := make([]disp.MsgSender, 0, conn.Senders.Count)
 	switch conn.Senders.Type {
 	case "echo":
 		for i := 0; uint(i) < conn.Senders.Count; i++ {
-			senders[i], err = CreateEchoSender(i, conn, dispatcher)
+			sender, err := CreateEchoSender(i, conn, dispatcher)
 			if err != nil {
 				return ce, err
 			}
+			senders = append(senders, sender)
 		}
 	case "twitter":
 		for i := 0; uint(i) < conn.Senders.Count; i++ {
-			senders[i], err = CreateTwitterConnection(i, conn, dispatcher)
+			sender, err := CreateTwitterConnection(i, conn, dispatcher)
 			if err != nil {
 				return ce, err
 			}
+			senders = append(senders, sender)
 		}
 	default:
 		log.Fatal("Unsupported sender type: " + conn.Senders.Type)
 	}
 
 	// Then all our receivers
-	receivers := make([]disp.MsgReceiver, conn.Receivers.Count)
+	receivers := make([]disp.MsgReceiver, 0, conn.Receivers.Count)
 	switch conn.Receivers.Type {
 	case "http":
 		for i := 0; uint(i) < conn.Receivers.Count; i++ {
-			receivers[i], err = CreateHttpReceiver(i, conn, dispatcher)
+			receiver, err := CreateHttpReceiver(i, conn, dispatcher)
 			if err != nil {
 				return ce, err
 			}
+			receivers = append(receivers, receiver)
 		}
 	default:
 		log.Fatal("Unsupported receiver type: " + conn.Receivers.Type)

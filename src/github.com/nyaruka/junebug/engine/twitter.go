@@ -10,10 +10,12 @@ import (
 	"sync"
 	"errors"
 	"net/url"
+	"strings"
 )
 
 const ACCESS_TOKEN = "access_token"
 const ACCESS_TOKEN_SECRET = "access_token_secret"
+const USERNAME = "username"
 
 type TwitterConnection struct {
 	id               int
@@ -26,6 +28,7 @@ type TwitterConnection struct {
 
 	token            string
 	secret           string
+	username         string
 }
 
 func (t TwitterConnection) Send(id uint64) {
@@ -114,6 +117,11 @@ func (t TwitterConnection) Start() {
 				continue
 			}
 
+			// check that this isn't one of our own DM's echoing back at us
+			if t.username == strings.ToLower(dm.SenderScreenName) {
+				continue
+			}
+
 			log.Printf("[%s][%d] Received DM from %s: %s", t.connection.Uuid, t.id, dm.SenderScreenName, dm.Text)
 
 			// create a new msg from our DM
@@ -151,6 +159,18 @@ func CreateTwitterConnection(id int, conn *store.Connection, dispatcher *disp.Di
 	twitter.secret = conn.Senders.Config[ACCESS_TOKEN_SECRET]
 	if twitter.secret == "" {
 		return t, errors.New("Missing required config field `access_token_secret`")
+	}
+
+	twitter.username = strings.ToLower(conn.Senders.Config[USERNAME])
+
+	// strip off any leading @s
+	for len(twitter.username) > 0 && twitter.username[0:1] == "@" {
+		twitter.username = twitter.username[1:]
+	}
+
+	// make sure we aren't empty
+	if twitter.username == "" {
+		return t, errors.New("Missing required field `username`")
 	}
 
 	return &twitter, err

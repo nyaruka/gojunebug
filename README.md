@@ -25,6 +25,7 @@ Currently there are two types of senders ```echo``` which after a configurable p
 
 #### Twitter Config
 
+```username``` - string, the username of the user sending and receiving DMs
 ```access_token``` - string, the access token for the user sending and receiving DMs
 ```access_token_secret``` - string, the access token secret for the user sending and receiving DMs
 
