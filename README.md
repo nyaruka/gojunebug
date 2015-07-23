@@ -17,34 +17,65 @@ First update junebug.conf to have the appropriate settings. Specifically make su
 ```
 
 ### Sender Types
-Currently there is only one type of sender ```echo```, which will take 5 seconds to fake a send, then send back a response that is an echo of what was sent.
+Currently there are two types of senders ```echo``` which after a configurable pause, will send the message back, and ```twitter``` that will send and receive Twitter DM's.
+
+#### Echo Config
+
+```pause``` - integer as string, representing how many seconds to pause before sending back an echo. Can be zero for no delay.
+
+#### Twitter Config
+
+```access_token``` - string, the access token for the user sending and receiving DMs
+```access_token_secret``` - string, the access token secret for the user sending and receiving DMs
 
 ### Receiver Types
 Currently there is only one type of receiver ```http```, which will POST the incoming msg to the URL provided on incoming messages.
+
+#### HTTP Config
+
+```url``` - string, the URL to POST to with new messages
 
 ## Endpoints
 All interactions with Junebug are through HTTP endpoints
 
 ### Creating Connection
 ```json
-POST /connection
+PUT /connection
 {
-  "receiver_type": "http",
-  "num_receivers": 5,
-  "receiver_url": "http://myhost.com/receive",
-  "sender_type": "echo",
-  "num_senders": 5
+  "senders": {
+    "type": "echo",
+    "count": 5,
+    "config": {
+      "pause": "1"
+    }
+  },
+  "receivers": {
+    "receiver_type": "http",
+    "count": 5,
+    "config": {
+      "url": "http://myhost.com/receive"
+    }
+  }
 }
 ```
 You will receive a response containing the connection created, and it's UUID:
 ```json
 {
-  "uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
-  "sender_type": "echo",
-  "num_senders": 5,
-  "receiver_type": "http",
-  "num_receivers": 5,
-  "receiver_url": "http://myhost.com/receive"
+  "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
+  "Senders": {
+    "type": "echo",
+    "count": 5,
+    "config": {
+      "pause": "1"
+    }
+  },
+  "Receivers": {
+    "type": "http",
+    "count": 5,
+    "config": {
+      "url": "http://myhost.com/receive"
+    }
+  }
 }
 ```
 
@@ -57,12 +88,21 @@ You will receive a list of the active connections:
 {
   "connections": [
     {
-      "uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
-      "sender_type": "echo",
-      "num_senders": 5,
-      "receiver_type": "http",
-      "num_receivers": 5,
-      "receiver_url": "http://myhost.com/receive"
+      "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
+      "senders": {
+        "type": "echo",
+        "count": 5,
+        "config": {
+          "pause": "1"
+        }
+      },
+      "receivers": {
+        "type": "http",
+        "count": 5,
+        "config": {
+          "url": "http://myhost.com/receive"
+        }
+      }
     }
   ]
 }
@@ -75,13 +115,22 @@ GET /connection/[connection_uuid]
 You will receive the connection configuration as well as it's status of queued incoming and outgoing messages:
 ```json
 {
-  "connection": {
-    "uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
-    "sender_type": "echo",
-    "num_senders": 5,
-    "receiver_type": "http",
-    "num_receivers": 5,
-    "receiver_url": "http://myhost.com/receive"
+  "connection: {
+  "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
+  "Senders": {
+    "type": "echo",
+    "count": 5,
+    "config": {
+      "pause": "1"
+    }
+  },
+  "Receivers": {
+    "type": "http",
+    "count": 5,
+    "config": {
+      "url": "http://myhost.com/receive"
+    }
+   }
   },
   "status": {
     "outgoing_queued": 0,
@@ -92,9 +141,34 @@ You will receive the connection configuration as well as it's status of queued i
 }
 ```
 
+### Deleting a Connection
+```json
+DELETE /connection/[connection_uuid]
+```
+You will receive a response containing the connection status when it was closed. Note that this call blocks until all workers have stopped sending, so may take a bit of time.
+```json
+{
+  "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
+  "Senders": {
+    "type": "echo",
+    "count": 5,
+    "config": {
+      "pause": "1"
+    }
+  },
+  "Receivers": {
+    "type": "http",
+    "count": 5,
+    "config": {
+      "url": "http://myhost.com/receive"
+    }
+  }
+}
+```
+
 ### Sending a message
 ```json
-POST /connection/[connection_uuid]/send
+PUT /connection/[connection_uuid]/send
 {
   "text": "Hello World",
   "address": "+250788383383",

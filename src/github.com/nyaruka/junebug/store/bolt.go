@@ -28,11 +28,17 @@ type Msg struct {
 
 type Connection struct {
 	Uuid               string `json:"uuid"`
-	SenderType         string `json:"sender_type"`
-	NumSenders         int    `json:"num_senders"`
-	ReceiverType       string `json:"receiver_type"`
-	NumReceivers       int    `json:"num_receivers"`
-	ReceiverUrl        string `json:"receiver_url"`
+
+	Senders struct {
+		Type           string            `json:"type"`
+		Count          uint              `json:"count"`
+	    Config         map[string]string `json:"config"` } `json:"senders"`
+
+
+	Receivers struct {
+		Type           string            `json:"type"`
+		Count          uint              `json:"count"`
+	    Config         map[string]string `json:"config"` } `json:"receivers"`
 }
 
 type ConnectionStatus struct {
@@ -522,32 +528,28 @@ func ConnectionFromJson(body io.Reader) (*Connection, error) {
 	}
 
 	// type is required
-	if connection.SenderType == "" {
+	if connection.Senders.Type == "" {
 		return &connection, errors.New("Must specify a sender type in field `sender_type`")
 	}
 
-	if connection.SenderType != "echo" {
-		return &connection, errors.New("Invalid sender_type, must be `echo`")
+	if connection.Senders.Type != "echo" && connection.Senders.Type != "twitter" {
+		return &connection, errors.New("Invalid sender_type, must be `echo` or `twitter`")
 	}
 
-	if connection.ReceiverType == "" {
-		connection.ReceiverType = "http"
+	if connection.Receivers.Type == "" {
+		connection.Receivers.Type = "http"
 	}
 
-	if connection.ReceiverType != "http" {
+	if connection.Receivers.Type != "http" {
 		return &connection, errors.New("Invalid receiver_type, must be `http`")
 	}
 
-	if connection.NumSenders == 0 {
-		connection.NumSenders = 1
+	if connection.Senders.Count == 0 {
+		connection.Senders.Count = 1
 	}
 
-	if connection.NumReceivers == 0 {
-		connection.NumReceivers = 1
-	}
-
-	if connection.ReceiverUrl == "" {
-		return &connection, errors.New("Must specify a receiver URL for incoming messages in field `receiver_url`")
+	if connection.Receivers.Count == 0 {
+		connection.Receivers.Count = 1
 	}
 
 	// ok, all looks good, generate a new UUID

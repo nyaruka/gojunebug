@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"fmt"
 	"sync"
+	"errors"
 )
+
+const RECEIVE_URL = "url"
 
 // Http Receiver is a basic receiver that forwards the incoming message to an endpoint
 type HttpReceiver struct {
@@ -21,6 +24,7 @@ type HttpReceiver struct {
 	pendingMsg       chan uint64
 	done             chan int
 	wg               *sync.WaitGroup
+	url              string
 }
 
 func (s HttpReceiver) Receive(id uint64) {
@@ -58,7 +62,7 @@ func (r HttpReceiver) Start() {
 					msgLog = fmt.Sprintf("[%s][%d] Error json encoding msg (%d): ", r.connection.Uuid, r.id, id, err.Error())
 				} else {
 					// we post our Msg body to our receiver URL
-					req, err := http.NewRequest("POST", r.connection.ReceiverUrl, bytes.NewBuffer(js))
+					req, err := http.NewRequest("POST", r.url, bytes.NewBuffer(js))
 					req.Header.Set("Content-Type", "application/json")
 
 					client := &http.Client{}
@@ -97,12 +101,19 @@ func (r HttpReceiver) Start() {
 	}()
 }
 
-func CreateHttpReceiver(id int, conn *store.Connection, dispatcher *disp.Dispatcher) HttpReceiver {
-	return HttpReceiver{
+func CreateHttpReceiver(id int, conn *store.Connection, dispatcher *disp.Dispatcher) (r *HttpReceiver, err error) {
+	receiver := HttpReceiver{
 		id: id,
 		connection:       *conn,
 		readyReceivers:   dispatcher.Receivers,
 		pendingMsg:       make(chan uint64),
 		done:             dispatcher.Done,
 		wg:               dispatcher.WaitGroup }
+
+	receiver.url = conn.Receivers.Config[RECEIVE_URL]
+	if receiver.url == "" {
+		return r, errors.New("You must specify a `url` in your configuration")
+	}
+
+	return &receiver, err
 }

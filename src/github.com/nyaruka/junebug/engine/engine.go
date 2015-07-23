@@ -15,37 +15,51 @@ type ConnectionEngine struct {
 
 // Creates a new Connection object given the configuration and dispatcher, this is a factory
 // method of sorts.
-func NewConnectionEngine(conn *store.Connection) *ConnectionEngine {
+func NewConnectionEngine(conn *store.Connection) (ce *ConnectionEngine, err error) {
 	// create a dispatcher for this connection
-	dispatcher := disp.CreateDispatcher(conn.NumSenders, conn.NumReceivers)
+	dispatcher := disp.CreateDispatcher(conn.Senders.Count, conn.Receivers.Count)
 
 	// Create all our senders
-	senders := make([]disp.MsgSender, conn.NumSenders)
-	switch conn.SenderType {
+	// TODO: refactor this so it isn't so repetitive
+	senders := make([]disp.MsgSender, conn.Senders.Count)
+	switch conn.Senders.Type {
 	case "echo":
-		for i := 0; i < conn.NumSenders; i++ {
-			senders[i] = CreateEchoSender(i, conn, dispatcher)
+		for i := 0; uint(i) < conn.Senders.Count; i++ {
+			senders[i], err = CreateEchoSender(i, conn, dispatcher)
+			if err != nil {
+				return ce, err
+			}
+		}
+	case "twitter":
+		for i := 0; uint(i) < conn.Senders.Count; i++ {
+			senders[i], err = CreateTwitterConnection(i, conn, dispatcher)
+			if err != nil {
+				return ce, err
+			}
 		}
 	default:
-		log.Fatal("Unsupported sender type: " + conn.SenderType)
+		log.Fatal("Unsupported sender type: " + conn.Senders.Type)
 	}
 
 	// Then all our receivers
-	receivers := make([]disp.MsgReceiver, conn.NumReceivers)
-	switch conn.ReceiverType {
+	receivers := make([]disp.MsgReceiver, conn.Receivers.Count)
+	switch conn.Receivers.Type {
 	case "http":
-		for i := 0; i < conn.NumReceivers; i++ {
-			receivers[i] = CreateHttpReceiver(i, conn, dispatcher)
+		for i := 0; uint(i) < conn.Receivers.Count; i++ {
+			receivers[i], err = CreateHttpReceiver(i, conn, dispatcher)
+			if err != nil {
+				return ce, err
+			}
 		}
 	default:
-		log.Fatal("Unsupported receiver type: " + conn.ReceiverType)
+		log.Fatal("Unsupported receiver type: " + conn.Receivers.Type)
 	}
 
 	return &ConnectionEngine{
 		Connection: conn,
 		Senders: senders,
 		Receivers: receivers,
-		Dispatcher: dispatcher }
+		Dispatcher: dispatcher }, err
 }
 
 func (c *ConnectionEngine) AddPendingMsgsFromDB() (outgoing int, incoming int, err error) {

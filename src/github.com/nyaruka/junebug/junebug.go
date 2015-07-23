@@ -36,7 +36,7 @@ func main() {
 	runtime.GOMAXPROCS(*procs)
 
 	// Open our Database
-	store.OpenDB(config.DB.Filename)
+	store.OpenDB(config.Db.Filename)
 
 	// load our connection configurations
 	connections, err := store.LoadAllConnections()
@@ -58,7 +58,11 @@ func main() {
 		}
 
 		// and create our actual connection
-		engine := engine.NewConnectionEngine(&connection)
+		engine, err := engine.NewConnectionEngine(&connection)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		engine.Start()
 		incoming, outgoing, err := engine.AddPendingMsgsFromDB()
 		if err != nil {

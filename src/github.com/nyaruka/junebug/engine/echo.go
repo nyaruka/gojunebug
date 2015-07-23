@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"strconv"
+	"errors"
 )
 
 // EchoSender is a dummy sender that takes 5 seconds to send anything, then returns an
@@ -16,6 +18,8 @@ import (
 //
 // It is an implementation of MsgSender
 //
+
+const PAUSE = "pause"
 
 type EchoSender struct {
 	id               int
@@ -25,6 +29,7 @@ type EchoSender struct {
 	incoming         chan uint64 // for receiving out our echos
 	done             chan int
 	wg               *sync.WaitGroup
+	pause            uint
 }
 
 func (s EchoSender) Send(id uint64) {
@@ -89,8 +94,8 @@ func (s EchoSender) Start() {
 	}()
 }
 
-func CreateEchoSender(id int, conn *store.Connection, dispatcher *disp.Dispatcher) EchoSender {
-	return EchoSender{
+func CreateEchoSender(id int, conn *store.Connection, dispatcher *disp.Dispatcher) (e *EchoSender, err error) {
+	echo := EchoSender{
 		id: id,
 		connection:       *conn,
 		readySenders:     dispatcher.Senders,
@@ -98,4 +103,11 @@ func CreateEchoSender(id int, conn *store.Connection, dispatcher *disp.Dispatche
 		pendingMsg:       make(chan uint64),
 		done:             dispatcher.Done,
 		wg:               dispatcher.WaitGroup }
+
+	pause, _ := strconv.ParseInt(conn.Senders.Config[PAUSE], 10, 8)
+	if pause < 0 {
+		return e, errors.New(fmt.Sprintf("Pause must be 0 or a positive integer, was: %d", pause))
+	}
+	echo.pause = uint(pause)
+	return &echo, err
 }

@@ -41,9 +41,9 @@ type Dispatcher struct {
 	WaitGroup   *sync.WaitGroup
 }
 
-func CreateDispatcher(nsenders int, nreceivers int) *Dispatcher {
+func CreateDispatcher(nsenders uint, nreceivers uint) *Dispatcher {
 	return &Dispatcher{
-		Outgoing: make(chan uint64),
+		Outgoing:  make(chan uint64),
 		Senders:   make(chan MsgSender, nsenders),
 		Incoming:  make(chan uint64, nsenders),
 		Receivers: make(chan MsgReceiver, nreceivers),

@@ -9,13 +9,13 @@ import (
 
 // Defines our configuration file format, this is all in the git/init format
 type ConfigFormat struct {
-	DB struct {
-		Filename    string
-	}
+	Db struct {
+		Filename    string }
 	Server struct {
-		Port int
-	}
-}
+		Port int }
+	Twitter struct {
+		Consumer_Key string
+		Consumer_Secret string }}
 
 var Config ConfigFormat
 
@@ -24,7 +24,11 @@ func GetSampleConfig() string {
 		"filename = \"/usr/local/junebug/junebug.db\"\n" +
 		"\n" +
 		"[server]\n" +
-		"port = 8000\n"
+		"port = 8000\n" +
+	    "\n" +
+		"[twitter]\n" +
+		"consumer-key = \"put-your-twitter-application-consumer-key-here\"\n" +
+	    "consumer-secret = \"put-your-twitter-application-consumer-secret-here\"\n"
 }
 
 func validateDirectory(key string, path string) error {

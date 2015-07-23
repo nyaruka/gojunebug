@@ -30,15 +30,21 @@ func addConnection(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 		return
 	}
 
-	// write the config to the filesystem
+	// gentlemen, start your engines!
+	engine, err := engine.NewConnectionEngine(connection)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// ok, things look good, let's start our connection
 	err = connection.Save()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// gentlemen, start your engines!
-	engine := engine.NewConnectionEngine(connection)
+	// start our engines!
 	engine.Start()
 	engines[connection.Uuid] = engine
 
@@ -231,7 +237,7 @@ func StartServer(e *map[string]*engine.ConnectionEngine) {
 	log.Println("\tPUT     /connection                    - Add a connection")
 	log.Println("\tGET     /connection                    - List Connections")
 	log.Println("\tGET     /connection/[uuid]             - Read Connection Status")
-	log.Println("\tDELETE  /connection/[uuid]/            - Shut down and delete a Connection")
+	log.Println("\tDELETE  /connection/[uuid]             - Shut down and delete a Connection")
 	log.Println("")
 	log.Println("\tPUT     /connection/[uuid]/send        - Send Message")
 	log.Println("\tGET     /connection/[uuid]/status/[id] - Get Message Status")
