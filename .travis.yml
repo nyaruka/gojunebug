@@ -3,4 +3,8 @@ language: go
 go:
   - 1.4
 
-install: go install github.com/nyaruka/junebug
+install: 
+  - go install github.com/nyaruka/junebug
+
+before_script:
+  - go vet ./...

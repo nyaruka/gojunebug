@@ -19,8 +19,10 @@ func main() {
 
 	// they didn't pass in settings parameter, print some help
 	if *settings == "" {
-		fmt.Println("\nUsage: junebug --settings=junebug.conf\n")
-		fmt.Println("Example configuration file:\n")
+		fmt.Println("\nUsage: junebug --settings=junebug.conf")
+		fmt.Println()
+		fmt.Println("Example configuration file:")
+		fmt.Println()
 		fmt.Println(cfg.GetSampleConfig())
 		fmt.Println()
 		os.Exit(1)

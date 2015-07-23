@@ -55,11 +55,13 @@ func (r HttpReceiver) Start() {
 			var msgLog = ""
 			msg, err := store.MsgFromId(r.connection.Uuid, id)
 			if err != nil {
-				msgLog = fmt.Sprintf("[%s][%d] Error loading msg (%d) from store: ", r.connection.Uuid, r.id, id, err.Error())
+				msgLog = fmt.Sprintf(
+					"[%s][%d] Error loading msg (%d) from store: %s", r.connection.Uuid, r.id, id, err.Error())
 			} else {
 				js, err := json.Marshal(msg)
 				if err != nil {
-					msgLog = fmt.Sprintf("[%s][%d] Error json encoding msg (%d): ", r.connection.Uuid, r.id, id, err.Error())
+					msgLog = fmt.Sprintf(
+						"[%s][%d] Error json encoding msg (%d): %s", r.connection.Uuid, r.id, id, err.Error())
 				} else {
 					// we post our Msg body to our receiver URL
 					req, err := http.NewRequest("POST", r.url, bytes.NewBuffer(js))
@@ -68,18 +70,15 @@ func (r HttpReceiver) Start() {
 					client := &http.Client{}
 					resp, err := client.Do(req)
 					if err != nil {
-						msgLog = fmt.Sprintf("[%s][%d] Error posting msg (%d): ", r.connection.Uuid, r.id, id, err.Error())
+						msgLog = fmt.Sprintf("[%s][%d] Error posting msg (%d): %s", r.connection.Uuid, r.id, id, err.Error())
 					} else {
 						buf := new(bytes.Buffer)
 						buf.ReadFrom(resp.Body)
 						body := buf.String()
 
-						if resp.Status != "200" || resp.Status != "201" {
-							msgLog = fmt.Sprintf("[%s][%d] Error posting msg (%d) received status %d: ",
-								r.connection.Uuid,
-								r.id,
-								id,
-								body)
+						if resp.Status != "200" && resp.Status != "201" {
+							msgLog = fmt.Sprintf("[%s][%d] Error posting msg (%d) received status %s: %s",
+								r.connection.Uuid, r.id, id, resp.Status, body)
 						} else {
 							msgLog = fmt.Sprintf("Status: %s\n\n%s", resp.Status, body)
 						}

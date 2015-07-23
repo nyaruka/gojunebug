@@ -82,7 +82,7 @@ func (s EchoSender) Start() {
 			incoming := store.MsgFromText(s.connection.Uuid, msg.Address, "echo: "+msg.Text)
 			err = incoming.WriteToInbox()
 			if err != nil {
-				log.Printf("[%s][%d] Error adding incoming msg (%s)", s.connection.Uuid, s.id, id)
+				log.Printf("[%s][%d] Error adding incoming msg (%d)", s.connection.Uuid, s.id, id)
 			}
 
 			// schedule it to go out
