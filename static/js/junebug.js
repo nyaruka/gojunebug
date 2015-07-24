@@ -1,9 +1,13 @@
 angular.module('junebug', [])
     .controller('EndpointController', function($scope, $http) {
         var ec = this;
+
+
+        $scope.formData = {}
         $scope.endpoints = [];
-        $scope.connUuid = "connection uuid";
-        $scope.msgId = "msg id";
+
+        $scope.formData.connUuid = "connection uuid";
+        $scope.formData.msgId = "msg id";
 
         $scope.endpoints.push({
             id: 'list-conns',
@@ -140,9 +144,9 @@ angular.module('junebug', [])
             for(var i in ep.url_parts){
                 var part = ep.url_parts[i];
                 if (part.name == 'conn_uuid'){
-                    url += $scope.connUuid;
+                    url += $scope.formData.connUuid;
                 } else if (part.name == 'msg_id'){
-                    url += $scope.msgId;
+                    url += $scope.formData.msgId;
                 } else {
                     url += part.value
                 }
@@ -157,12 +161,12 @@ angular.module('junebug', [])
                     // walk the tree to see if there is a uuid to set
                     var foundConn = findField(data, "uuid");
                     if (foundConn != null) {
-                        $scope.connUuid = foundConn;
+                        $scope.formData.connUuid = foundConn;
                     }
 
                     var foundMsg = findField(data, "id");
                     if (foundMsg != null){
-                        $scope.msgId = foundMsg;
+                        $scope.formData.msgId = foundMsg;
                     }
 
                     ep.response = "STATUS: " + status + "\n" + angular.toJson(data, true);
