@@ -26,8 +26,8 @@
             <button class="fire" href ng-click="ec.fire(ep)">GO</button>
             {{ ep.method }}
             <span ng-repeat="up in ep.url_parts" class="url-part">
-              <span ng-show='up.name == "conn_uuid"'><input type="text" size="36" ng-model="connUuid"/></span>
-              <span ng-show='up.name == "msg_id"'><input type="text" size="32" ng-model="msgId"/></span>
+              <span ng-show='up.name == "conn_uuid"'><input type="text" size="36" ng-model="formData.connUuid"/></span>
+              <span ng-show='up.name == "msg_id"'><input type="text" size="32" ng-model="formData.msgId"/></span>
               <span ng-hide="up.name" class="url-part-value">{{up.value}}</span>
             </span>
           </div>
