@@ -219,12 +219,19 @@ func readMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Write(js)
 }
 
+func serveIndex(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	http.ServeFile(w, r, "static/index.html")
+}
+
 var engines map[string]*engine.ConnectionEngine
 
 func StartServer(e *map[string]*engine.ConnectionEngine) {
 	engines = *e
 
 	router := httprouter.New()
+	router.GET("/", serveIndex)
+	router.ServeFiles("/static/*filepath", http.Dir("static"))
+
 	router.GET("/connection", listConnections)
 	router.PUT("/connection", addConnection)
 	router.DELETE("/connection/:conn_uuid", deleteConnection)

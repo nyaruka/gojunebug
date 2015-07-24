@@ -1,0 +1,45 @@
+<!doctype html>
+<html ng-app="junebug">
+  <head>
+    <script src="/static/lib/jquery-2.1.1.min.js"></script>
+    <script src="/static/lib/angular.min.js"></script>
+    <script src="/static/js/junebug.js"></script>
+    <script src="/static/lib/highlight.pack.js"></script>
+    <link rel="stylesheet" href="static/css/junebug.css">
+    <link rel="stylesheet" href="static/css/railscasts.css">
+    <script>hljs.initHighlightingOnLoad();</script>
+  </head>
+  <body>
+    <h2>Junebug API</h2>
+
+    <div ng-controller="EndpointController as ec">
+      <div ng-repeat="ep in endpoints">
+        <div class="endpoint-title" ng-click="ec.toggle(ep)">
+          <div class="pull-right endpoint-description">
+            {{ep.title}}
+          </div>
+          <span class="endpoint-method method-{{ep.method}}">{{ep.method}}</span>
+          <span class="endpoint-url">{{ep.url}}</span>
+        </div>
+        <div class="endpoint endpoint-{{ep.method}}" style="display: block;" ng-show="ep.expanded">
+          <div class="endpoint-form-header">
+            <button class="fire" href ng-click="ec.fire(ep)">GO</button>
+            {{ ep.method }}
+            <span ng-repeat="up in ep.url_parts" class="url-part">
+              <span ng-show='up.name == "conn_uuid"'><input type="text" size="36" ng-model="connUuid"/></span>
+              <span ng-show='up.name == "msg_id"'><input type="text" size="32" ng-model="msgId"/></span>
+              <span ng-hide="up.name" class="url-part-value">{{up.value}}</span>
+            </span>
+          </div>
+          <div class="endpoint-body" ng-show="{{ ep.has_body }}">
+            <textarea ng-model="ep.body" rows="{{ ep.body_rows }}"></textarea>
+          </div>
+          <div class="clearfix"></div>
+          <div class="endpoint-result" ng-show="ep.response">
+            <pre><code class="http" id="{{ep.id}}-response"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

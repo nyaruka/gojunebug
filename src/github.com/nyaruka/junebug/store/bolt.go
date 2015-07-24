@@ -15,7 +15,7 @@ import (
 )
 
 type Msg struct {
-	Id         uint64    `json:"id"`
+	Id         uint64    `json:"id,string"` // javascript doesn't like 64 bit ints
 	ConnUuid   string    `json:"conn_uuid"`
 	Address    string    `json:"address"`
 	Text       string    `json:"text"`

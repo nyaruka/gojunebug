@@ -1,0 +1,220 @@
+body {
+    background: #fff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;;
+    font-size: 15px;
+    line-height: 1;
+    margin: 20px auto;
+    width: 960px;
+    font-weight: 200;
+    padding-bottom: 200px;
+    color: #333;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+a {
+  color: #4183c4;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.endpoint-url {
+    font-family: monospace;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 200;
+  margin: 0 0 15px;
+  padding: 0;
+}
+
+h1 {
+  border-bottom: 1px solid #ddd;
+  font-size: 2.5em;
+  font-weight: bold;
+  margin: 0 0 15px;
+  padding: 0;
+}
+
+h2 {
+  border-bottom: 1px solid #eee;
+  font-size: 2em;
+}
+
+h3 {
+  font-size: 1.5em;
+}
+
+h4 {
+  font-size: 1.2em;
+}
+
+p, ul {
+  margin: 15px 0;
+}
+
+ul {
+  padding-left: 30px;
+}
+
+.endpoint-description {
+    margin-top: 2px;
+}
+.pull-right {
+    float: right;
+}
+
+.endpoint {
+    color: #eee;
+    background-color: #555;
+}
+
+.endpoint-method {
+    font-family: monospace;
+}
+.method-GET {
+    background-color: #058C40;
+    color: #eee;
+    padding: 3px;
+    text-align: center;
+    width: 55px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.method-DELETE {
+    background-color: #952624;
+    color: #eee;
+    padding: 3px;
+    text-align: center;
+    width: 55px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.method-PUT {
+    background-color: #1793cd;
+    color: #eee;
+    width: 55px;
+    text-align: center;
+    padding: 3px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.endpoint-title {
+    background-color: #eee;
+    border: 1px solid #ccc;
+    padding: 5px;
+    margin-top: 10px;
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+td.field {
+    width: 100px;
+    text-align: right;
+    font-family: monospace;
+    font-weight: bold;
+    color: #666;
+}
+
+.table th, .table td {
+    padding: 8px;
+    line-height: 20px;
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid #dddddd;
+}
+
+.field-title {
+    font-weight: bold;
+}
+
+textarea {
+    width: 98%;
+    font-family: monospace;
+    padding: 5px;
+}
+
+.fire {
+    float: right;
+}
+
+button {
+    background-color: #888;
+    font-size: 14px;
+    font-family: monospace;
+    color: #ddd;
+    padding: 2px;
+    text-align: center;
+    width: 55px;
+    display: inline-block;
+    height: 30px;
+    text-shadow:none !important;
+    border:none !important;
+    box-shadow:none !important;
+    cursor: pointer;
+    outline: none;
+}
+
+.endpoint-form-header {
+    font-family: monospace;
+    padding: 5px 10px;
+    height: 30px;
+}
+
+.url-part {
+    height: 30px;
+    display: inline-block;
+}
+
+.url-part-value {
+    line-height: 30px;
+}
+
+.url-part input[type="text"] {
+    font-family: monospace;
+    background-color: #333;
+    border: 0px;
+    padding: 5px;
+    color: #ff0;
+    outline: none;
+}
+
+.endpoint-body textarea {
+    font-family: monospace;
+    background-color: #555;
+    color: #eee;
+    border: 0px;
+    outline: none;
+    font-size: 14px;
+    margin: 0px 5px;
+}
+
+.endpoint-result {
+    border-top: 1px solid #444;
+    font-size: 14px;
+}
+
+.endpoint-result pre {
+    padding: 0px 0px;
+    margin-top: 0px;
+}
+
+code {
+    background-color: #555;
+    font-family: monospace;
+    font-size: 14px;
+}
+
