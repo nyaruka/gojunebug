@@ -71,7 +71,7 @@ ul {
 
 .endpoint {
     color: #eee;
-    background-color: #555;
+    background-color:#444;
 }
 
 .endpoint-method {
@@ -188,13 +188,13 @@ button {
     background-color: #333;
     border: 0px;
     padding: 5px;
-    color: #ff0;
+    color: #a5c261;
     outline: none;
 }
 
 .endpoint-body textarea {
     font-family: monospace;
-    background-color: #555;
+    background-color: #444;
     color: #eee;
     border: 0px;
     outline: none;
