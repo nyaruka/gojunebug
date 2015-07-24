@@ -2,7 +2,6 @@ angular.module('junebug', [])
     .controller('EndpointController', function($scope, $http) {
         var ec = this;
 
-
         $scope.formData = {}
         $scope.endpoints = [];
 
