@@ -4,7 +4,7 @@ go:
   - 1.4
 
 install: 
-  - export GOPATH=.
+  - export GOPATH=GOPATH:$HOME/gopath/src/github.com/nyaruka/gojunebug
   - go install github.com/nyaruka/junebug
 
 before_script:
