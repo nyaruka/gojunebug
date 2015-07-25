@@ -116,7 +116,7 @@ GET /connection/[connection_uuid]
 You will receive the connection configuration as well as it's status of queued incoming and outgoing messages:
 ```json
 {
-  "connection: {
+  "connection": {
   "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
   "Senders": {
     "type": "echo",
@@ -143,7 +143,7 @@ You will receive the connection configuration as well as it's status of queued i
 ```
 
 ### Deleting a Connection
-```json
+```
 DELETE /connection/[connection_uuid]
 ```
 You will receive a response containing the connection status when it was closed. Note that this call blocks until all workers have stopped sending, so may take a bit of time.
@@ -168,7 +168,7 @@ You will receive a response containing the connection status when it was closed.
 ```
 
 ### Sending a message
-```json
+```
 PUT /connection/[connection_uuid]/send
 {
   "text": "Hello World",
@@ -184,7 +184,7 @@ You will receive the message created and its UUID:
   "id": 2047,
   "conn_uuid": "54b7647b-924d-4ba0-b248-1145b96aefc9",
   "address": "+250788383383",
-  "text": "Hello World"
+  "text": "Hello World",
   "priority": "H",
   "status": "Q",
   "log": "",
@@ -194,7 +194,7 @@ You will receive the message created and its UUID:
 ```
 
 ### Checking the status of a message
-```json
+```
 GET /connection/[connection_uuid]/status/[id]
 ```
 You will receive the message content, its current status, when we finished
