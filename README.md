@@ -2,7 +2,7 @@
 This is a proof of concept of using golang for an SMPP gateway like Kannel. It doesn't do much of anything yet, it is mostly for me learning Go.
 
 ## Running
-First update junebug.conf to have the appropriate settings. Specifically make sure all the revelant directories exit.
+First update junebug.conf to have the appropriate settings. Specifically make sure all the relevant directories exist.
 
 ```bash
 % export GOPATH=`pwd`
@@ -17,7 +17,7 @@ First update junebug.conf to have the appropriate settings. Specifically make su
 ```
 
 ### Sender Types
-Currently there are two types of senders ```echo``` which after a configurable pause, will send the message back, and ```twitter``` that will send and receive Twitter DM's.
+Currently there are two types of senders: ```echo``` which after a configurable pause, will send the message back, and ```twitter``` that will send and receive Twitter DMs.
 
 #### Echo Config
 
@@ -37,7 +37,7 @@ Currently there is only one type of receiver ```http```, which will POST the inc
 ```url``` - string, the URL to POST to with new messages
 
 ## Endpoints
-All interactions with Junebug are through HTTP endpoints
+All interactions with Junebug are through HTTP endpoints.
 
 ### Creating Connection
 ```json
@@ -59,7 +59,7 @@ PUT /connection
   }
 }
 ```
-You will receive a response containing the connection created, and it's UUID:
+You will receive a response containing the connection created, and its UUID:
 ```json
 {
   "uuid": "3958bba4-8eae-43b8-b30c-534db207b279",
@@ -113,7 +113,7 @@ You will receive a list of the active connections:
 ```
 GET /connection/[connection_uuid]
 ```
-You will receive the connection configuration as well as it's status of queued incoming and outgoing messages:
+You will receive the connection configuration as well as its status of queued incoming and outgoing messages:
 ```json
 {
   "connection": {
